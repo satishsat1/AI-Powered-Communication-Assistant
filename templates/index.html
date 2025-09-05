@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Communication Assistant</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8fafc;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+            border-left: 4px solid;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.urgent { border-left-color: #ef4444; }
+        .stat-card.normal { border-left-color: #10b981; }
+        .stat-card.positive { border-left-color: #3b82f6; }
+        .stat-card.negative { border-left-color: #f59e0b; }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .emails-section {
+            background: white;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            border-color: #4f46e5;
+            color: #4f46e5;
+        }
+
+        .filter-btn.active {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .email-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .email-card:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .email-card.urgent {
+            border-left: 4px solid #ef4444;
+            background: #fef2f2;
+        }
+
+        .email-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .email-meta {
+            flex: 1;
+        }
+
+        .sender {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 1.1em;
+        }
+
+        .subject {
+            font-weight: 700;
+            color: #4f46e5;
+            margin: 5px 0;
+            font-size: 1.1em;
+        }
+
+        .date {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+
+        .tags {
+            display: flex;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .tag {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .tag.urgent { background: #fee2e2; color: #dc2626; }
+        .tag.normal { background: #d1fae5; color: #059669; }
+        .tag.positive { background: #dbeafe; color: #2563eb; }
+        .tag.negative { background: #fef3c7; color: #d97706; }
+        .tag.neutral { background: #f3f4f6; color: #4b5563; }
+
+        .email-body {
+            color: #4b5563;
+            line-height: 1.6;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 3px solid #e5e7eb;
+        }
+
+        .extracted-info {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 3px solid #0ea5e9;
+        }
+
+        .extracted-info h4 {
+            color: #0c4a6e;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .extracted-info ul {
+            list-style: none;
+        }
+
+        .extracted-info li {
+            padding: 2px 0;
+            color: #0f172a;
+        }
+
+        .ai-response {
+            background: #f0fdf4;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #10b981;
+        }
+
+        .ai-response h4 {
+            color: #065f46;
+            margin-bottom: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-response-text {
+            color: #064e3b;
+            line-height: 1.6;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #d1fae5;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .analytics-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 1.1em;
+            color: #6b7280;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .priority-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .priority-indicator.urgent {
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+
+        .priority-indicator.normal {
+            background: #10b981;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .robot-icon::before {
+            content: "🤖";
+            margin-right: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .filter-buttons {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI Communication Assistant</h1>
+            <p>Intelligent Email Management & Auto-Response System</p>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card urgent">
+                <div class="stat-number" id="urgentCount">0</div>
+                <div class="stat-label">Urgent Emails</div>
+            </div>
+            <div class="stat-card normal">
+                <div class="stat-number" id="normalCount">0</div>
+                <div class="stat-label">Normal Priority</div>
+            </div>
+            <div class="stat-card positive">
+                <div class="stat-number" id="positiveCount">0</div>
+                <div class="stat-label">Positive Sentiment</div>
+            </div>
+            <div class="stat-card negative">
+                <div class="stat-number" id="negativeCount">0</div>
+                <div class="stat-label">Negative Sentiment</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="emails-section">
+                <div class="section-header">
+                    <h2 class="section-title">Support Emails</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="urgent">Urgent</button>
+                        <button class="filter-btn" data-filter="normal">Normal</button>
+                        <button class="filter-btn" data-filter="positive">Positive</button>
+                        <button class="filter-btn" data-filter="negative">Negative</button>
+                    </div>
+                </div>
+                <div id="emailsList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Processing emails with AI...
+                    </div>
+                </div>
+            </div>
+
+            <div class="analytics-section">
+                <h3 class="section-title">Analytics Dashboard</h3>
+                <div class="chart-container">
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="priorityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Email data from your dataset
+        const emailData = [
+            { sender: "eve@startup.io", subject: "Help required with account verification", body: "Do you support integration with third-party APIs?", sent_date: "19-08-2025 00:58" },
+            { sender: "diana@client.co", subject: "General query about subscription", body: "Hi team, I am unable to bring into my account since yesterday. Please help.", sent_date: "25-08-2025 00:58" },
+            { sender: "eve@startup.io", subject: "Immediate support needed for billing", body: "Hello, I wanted to understand the pricing tiers better. Could you provide detailed information?", sent_date: "20-08-2025 12:58" },
+            { sender: "alice@example.com", subject: "Urgent request: system access blocked", body: "Hi team, I am unable to log into my account since yesterday. This is critical for our operations.", sent_date: "21-08-2025 21:58" },
+            { sender: "eve@startup.io", subject: "Question: integration with API", body: "Despite multiple attempts, I cannot reset my password. Need immediate assistance.", sent_date: "20-08-2025 04:58" },
+            { sender: "alice@example.com", subject: "Critical help needed for downtime", body: "Hi team, I am unable to log into my account since yesterday. Our system is completely down.", sent_date: "18-08-2025 08:58" },
+            { sender: "diana@client.co", subject: "Help required with account verification", body: "There is a billing error where I was charged twice for the same service.", sent_date: "20-08-2025 19:58" },
+            { sender: "diana@client.co", subject: "Support needed for login issue", body: "I am facing issues with verifying my account. The verification email is not arriving.", sent_date: "23-08-2025 06:58" },
+            { sender: "bob@example.com", subject: "General query about subscription", body: "Our servers are down, and we need immediate assistance to restore service.", sent_date: "26-08-2025 20:58" },
+            { sender: "alice@example.com", subject: "Help required with account verification", body: "Do you support integration with third-party APIs? We need this for our project.", sent_date: "21-08-2025 13:58" },
+            { sender: "diana@client.co", subject: "Support needed for login issue", body: "Hi team, I am unable to log into my account since yesterday. Please help urgently.", sent_date: "26-08-2025 15:58" },
+            { sender: "alice@example.com", subject: "Help required with account verification", body: "Do you support integration with third-party APIs? This is urgent for our launch.", sent_date: "24-08-2025 05:58" },
+            { sender: "eve@startup.io", subject: "Critical help needed for downtime", body: "Our servers are down, and we need immediate assistance to restore operations.", sent_date: "21-08-2025 19:58" },
+            { sender: "alice@example.com", subject: "Query about product pricing", body: "There is a billing error where I was charged twice. Please resolve immediately.", sent_date: "24-08-2025 13:58" },
+            { sender: "alice@example.com", subject: "General query about subscription", body: "I am facing issues with verifying my account. The process seems broken.", sent_date: "26-08-2025 01:58" },
+            { sender: "bob@example.com", subject: "Immediate support needed for billing", body: "Despite multiple attempts, I cannot reset my password. This is urgent.", sent_date: "19-08-2025 07:58" },
+            { sender: "charlie@partner.org", subject: "Help required with account verification", body: "This is urgent - our system is completely inaccessible and affecting operations.", sent_date: "18-08-2025 00:58" },
+            { sender: "diana@client.co", subject: "Request for refund process clarification", body: "Could you clarify the steps involved in requesting a refund for our subscription?", sent_date: "22-08-2025 17:58" },
+            { sender: "eve@startup.io", subject: "Query about product pricing", body: "Our servers are down, and we need immediate assistance to restore service.", sent_date: "22-08-2025 09:58" },
+            { sender: "bob@customer.com", subject: "Urgent request: system access blocked", body: "Despite multiple attempts, I cannot reset my password. This is blocking our work.", sent_date: "19-08-2025 13:58" }
+        ];
+
+        // AI Processing Functions
+        function analyzeSentiment(text) {
+            const positiveWords = ['good', 'great', 'excellent', 'happy', 'satisfied', 'love', 'amazing', 'perfect', 'wonderful', 'fantastic'];
+            const negativeWords = ['bad', 'terrible', 'awful', 'hate', 'frustrated', 'angry', 'disappointed', 'broken', 'failed', 'error', 'problem', 'issue', 'unable', 'cannot', 'blocked', 'down', 'critical', 'urgent'];
+            
+            const lowerText = text.toLowerCase();
+            let positiveScore = 0;
+            let negativeScore = 0;
+            
+            positiveWords.forEach(word => {
+                if (lowerText.includes(word)) positiveScore++;
+            });
+            
+            negativeWords.forEach(word => {
+                if (lowerText.includes(word)) negativeScore++;
+            });
+            
+            if (negativeScore > positiveScore) return 'negative';
+            if (positiveScore > negativeScore) return 'positive';
+            return 'neutral';
+        }
+
+        function determinePriority(subject, body) {
+            const urgentKeywords = ['urgent', 'critical', 'immediate', 'emergency', 'asap', 'cannot access', 'down', 'blocked', 'failed', 'error', 'immediately', 'help', 'cannot', 'unable'];
+            const text = (subject + ' ' + body).toLowerCase();
+            
+            return urgentKeywords.some(keyword => text.includes(keyword)) ? 'urgent' : 'normal';
+        }
+
+        function extractKeyInfo(email) {
+            const info = [];
+            const text = email.subject + ' ' + email.body;
+            
+            // Extract email patterns
+            const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+            const emails = text.match(emailPattern);
+            if (emails) info.push(`Contact: ${emails.join(', ')}`);
+            
+            // Extract phone patterns
+            const phonePattern = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g;
+            const phones = text.match(phonePattern);
+            if (phones) info.push(`Phone: ${phones.join(', ')}`);
+            
+            // Extract request types
+            if (text.includes('billing')) info.push('Request Type: Billing Issue');
+            if (text.includes('login') || text.includes('account')) info.push('Request Type: Account Access');
+            if (text.includes('integration') || text.includes('api')) info.push('Request Type: Technical Integration');
+            if (text.includes('refund')) info.push('Request Type: Refund Request');
+            if (text.includes('pricing')) info.push('Request Type: Pricing Inquiry');
+            
+            return info.length > 0 ? info : ['Request Type: General Support'];
+        }
+
+        function generateAIResponse(email, sentiment, priority) {
+            const responses = {
+                urgent_negative: `Dear ${email.sender.split('@')[0]},
+
+Thank you for reaching out to us, and I sincerely apologize for the inconvenience you're experiencing. I understand how frustrating this situation must be, especially given the urgency of your request.
+
+I've escalated your case to our priority support team, and we're treating this as a critical issue. Our technical team is actively working on resolving the problem you've described.
+
+Here's what we're doing:
+- Immediate investigation of the reported issue
+- Priority queue placement for faster resolution
+- Dedicated support agent assigned to your case
+
+You can expect an update within the next 2 hours. In the meantime, please don't hesitate to reach out if you need any clarification or have additional concerns.
+
+Best regards,
+AI Support Assistant
+Priority Case #${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+
+                urgent_positive: `Dear ${email.sender.split('@')[0]},
+
+Thank you for your message! I appreciate your patience and understanding.
+
+I've reviewed your request and understand the urgency. Our team is ready to assist you immediately with your requirements.
+
+I'm fast-tracking your request and you should receive a detailed response from our specialist team within the next hour.
+
+Best regards,
+AI Support Assistant
+Case #${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+
+                normal_negative: `Dear ${email.sender.split('@')[0]},
+
+Thank you for contacting our support team. I understand your concerns and want to assure you that we're here to help resolve this issue.
+
+I've carefully reviewed your message and our team will investigate the matter thoroughly. While we work on a solution, please know that your feedback is valuable in helping us improve our services.
+
+You can expect a detailed response within 24 hours. If you have any additional information that might help us resolve this faster, please feel free to share it.
+
+Best regards,
+AI Support Assistant
+Case #${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+
+                normal_positive: `Dear ${email.sender.split('@')[0]},
+
+Thank you for reaching out to us! It's great to hear from you.
+
+I've reviewed your inquiry and our team will provide you with comprehensive information to address your questions. We appreciate your interest in our services.
+
+You can expect a detailed response within 24 hours with all the information you need.
+
+Best regards,
+AI Support Assistant
+Case #${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+
+                normal_neutral: `Dear ${email.sender.split('@')[0]},
+
+Thank you for contacting our support team.
+
+I've received your inquiry and have forwarded it to the appropriate department for review. Our team will analyze your request and provide you with accurate information.
+
+You can expect a response within 24 hours. If you have any additional questions in the meantime, please don't hesitate to reach out.
+
+Best regards,
+AI Support Assistant
+Case #${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+            };
+
+            const key = `${priority}_${sentiment}`;
+            return responses[key] || responses.normal_neutral;
+        }
+
+        // Process emails with AI
+        function processEmails() {
+            const processedEmails = emailData.map(email => {
+                const sentiment = analyzeSentiment(email.subject + ' ' + email.body);
+                const priority = determinePriority(email.subject, email.body);
+                const extractedInfo = extractKeyInfo(email);
+                const aiResponse = generateAIResponse(email, sentiment, priority);
+                
+                return {
+                    ...email,
+                    sentiment,
+                    priority,
+                    extractedInfo,
+                    aiResponse
+                };
+            });
+
+            // Sort by priority (urgent first) and then by date
+            return processedEmails.sort((a, b) => {
+                if (a.priority === 'urgent' && b.priority !== 'urgent') return -1;
+                if (a.priority !== 'urgent' && b.priority === 'urgent') return 1;
+                return new Date(b.sent_date) - new Date(a.sent_date);
+            });
+        }
+
+        // Update statistics
+        function updateStats(emails) {
+            const urgentCount = emails.filter(e => e.priority === 'urgent').length;
+            const normalCount = emails.filter(e => e.priority === 'normal').length;
+            const positiveCount = emails.filter(e => e.sentiment === 'positive').length;
+            const negativeCount = emails.filter(e => e.sentiment === 'negative').length;
+
+            document.getElementById('urgentCount').textContent = urgentCount;
+            document.getElementById('normalCount').textContent = normalCount;
+            document.getElementById('positiveCount').textContent = positiveCount;
+            document.getElementById('negativeCount').textContent = negativeCount;
+        }
+
+        // Render emails
+        function renderEmails(emails, filter = 'all') {
+            const filteredEmails = filter === 'all' ? emails : emails.filter(email => {
+                return email.priority === filter || email.sentiment === filter;
+            });
+
+            const emailsList = document.getElementById('emailsList');
+            
+            if (filteredEmails.length === 0) {
+                emailsList.innerHTML = '<div class="loading">No emails found for selected filter</div>';
+                return;
+            }
+
+            emailsList.innerHTML = filteredEmails.map(email => `
+                <div class="email-card ${email.priority}" data-priority="${email.priority}" data-sentiment="${email.sentiment}">
+                    <div class="priority-indicator ${email.priority}"></div>
+                    <div class="email-header">
+                        <div class="email-meta">
+                            <div class="sender">${email.sender}</div>
+                            <div class="subject">${email.subject}</div>
+                            <div class="date">${email.sent_date}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="tags">
+                        <span class="tag ${email.priority}">${email.priority.toUpperCase()}</span>
+                        <span class="tag ${email.sentiment}">${email.sentiment.toUpperCase()}</span>
+                    </div>
+                    
+                    <div class="email-body">${email.body}</div>
+                    
+                    <div class="extracted-info">
+                        <h4>📊 Extracted Information</h4>
+                        <ul>
+                            ${email.extractedInfo.map(info => `<li>• ${info}</li>`).join('')}
+                        </ul>
+                    </div>
+                    
+                    <div class="ai-response">
+                        <h4><span class="robot-icon"></span>AI Generated Response</h4>
+                        <div class="ai-response-text">${email.aiResponse.replace(/\n/g, '<br>')}</div>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="sendResponse('${email.sender}')">Send Response</button>
+                            <button class="btn btn-secondary" onclick="editResponse(this)">Edit Response</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Chart functions
+        function createCharts(emails) {
+            // Sentiment Chart
+            const sentimentCounts = {
+                positive: emails.filter(e => e.sentiment === 'positive').length,
+                negative: emails.filter(e => e.sentiment === 'negative').length,
+                neutral: emails.filter(e => e.sentiment === 'neutral').length
+            };
+
+            const sentimentCtx = document.getElementById('sentimentChart').getContext('2d');
+            new Chart(sentimentCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Positive', 'Negative', 'Neutral'],
+                    datasets: [{
+                        data: [sentimentCounts.positive, sentimentCounts.negative, sentimentCounts.neutral],
+                        backgroundColor: ['#10b981', '#ef4444', '#6b7280'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Sentiment Analysis'
+                        }
+                    }
+                }
+            });
+
+            // Priority Chart
+            const priorityCounts = {
+                urgent: emails.filter(e => e.priority === 'urgent').length,
+                normal: emails.filter(e => e.priority === 'normal').length
+            };
+
+            const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+            new Chart(priorityCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Urgent', 'Normal'],
+                    datasets: [{
+                        label: 'Email Count',
+                        data: [priorityCounts.urgent, priorityCounts.normal],
+                        backgroundColor: ['#ef4444', '#10b981'],
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Priority Distribution'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event handlers
+        function sendResponse(recipient) {
+            alert(`Response sent to ${recipient}! 📧\n\nIn a real implementation, this would:\n- Send the email via SMTP\n- Update the email status\n- Log the interaction`);
+        }
+
+        function editResponse(button) {
+            const responseDiv = button.closest('.ai-response').querySelector('.ai-response-text');
+            const currentText = responseDiv.textContent;
+            const newText = prompt('Edit the AI response:', currentText);
+            if (newText && newText !== currentText) {
+                responseDiv.innerHTML = newText.replace(/\n/g, '<br>');
+            }
+        }
+
+        // Initialize application
+        function initApp() {
+            setTimeout(() => {
+                const processedEmails = processEmails();
+                updateStats(processedEmails);
+                renderEmails(processedEmails);
+                createCharts(processedEmails);
+                
+                // Setup filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelector('.filter-btn.active').classList.remove('active');
+                        e.target.classList.add('active');
+                        renderEmails(processedEmails, e.target.dataset.filter);
+                    });
+                });
+                
+                // Store processed emails globally for filtering
+                window.processedEmails = processedEmails;
+            }, 2000); // Simulate AI processing time
+        }
+
+        // Start the application
+        initApp();
+    </script>
+</body>
+</html>
